@@ -1,0 +1,48 @@
+{
+  "name": "@blade47/saga-ts",
+  "version": "1.0.0",
+  "description": "A lightweight, type-safe saga pattern implementation for TypeScript with automatic rollback support",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "prepublishOnly": "npm run build && npm test",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "saga",
+    "typescript",
+    "transaction",
+    "rollback",
+    "compensation",
+    "distributed-transactions",
+    "saga-pattern"
+  ],
+  "author": "Alessandro Afloarei",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.19",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.3.3"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

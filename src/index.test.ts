@@ -443,4 +443,119 @@ describe('Saga Pattern', () => {
       }
     });
   });
+
+  describe('Nested sagas with rollback', () => {
+    it('should rollback nested saga using returned rollback function', async () => {
+      const actions: string[] = [];
+
+      const innerSagaResult = await createSaga()
+        .step(
+          'innerStep1',
+          {},
+          async () => {
+            actions.push('innerStep1-execute');
+            return { value: 1 };
+          },
+          async () => {
+            actions.push('innerStep1-rollback');
+          }
+        )
+        .step(
+          'innerStep2',
+          {},
+          async () => {
+            actions.push('innerStep2-execute');
+            return { value: 2 };
+          },
+          async () => {
+            actions.push('innerStep2-rollback');
+          }
+        )
+        .run();
+
+      expect(innerSagaResult.status).toBe('success');
+      expect(actions).toEqual(['innerStep1-execute', 'innerStep2-execute']);
+
+      // Now roll back the entire inner saga
+      if (innerSagaResult.status === 'success') {
+        await innerSagaResult.rollback();
+      }
+
+      expect(actions).toEqual([
+        'innerStep1-execute',
+        'innerStep2-execute',
+        'innerStep2-rollback',
+        'innerStep1-rollback',
+      ]);
+    });
+
+    it('should use nested saga rollback in outer saga compensation', async () => {
+      const actions: string[] = [];
+
+      const result = await createSaga()
+        .step(
+          'runInnerWorkflow',
+          {},
+          async () => {
+            const innerResult = await createSaga()
+              .step(
+                'createResource',
+                {},
+                async () => {
+                  actions.push('inner-createResource');
+                  return { id: 123 };
+                },
+                async () => {
+                  actions.push('inner-rollback-createResource');
+                }
+              )
+              .step(
+                'configureResource',
+                {},
+                async () => {
+                  actions.push('inner-configureResource');
+                  return { configured: true };
+                },
+                async () => {
+                  actions.push('inner-rollback-configureResource');
+                }
+              )
+              .run();
+
+            if (innerResult.status === 'failed') {
+              throw new Error('Inner saga failed');
+            }
+
+            return {
+              innerResults: innerResult.results,
+              innerRollback: innerResult.rollback,
+            };
+          },
+          async (output) => {
+            // Rollback the entire inner saga
+            actions.push('outer-rollback-triggered');
+            await output.innerRollback();
+          }
+        )
+        .step(
+          'outerStep2',
+          {},
+          async () => {
+            actions.push('outer-step2');
+            throw new Error('Outer step failed');
+          }
+        )
+        .run();
+
+      expect(result.status).toBe('failed');
+      expect(actions).toEqual([
+        'inner-createResource',
+        'inner-configureResource',
+        'outer-step2',
+        'outer-rollback-triggered',
+        'inner-rollback-configureResource',
+        'inner-rollback-createResource',
+      ]);
+    });
+  });
 });

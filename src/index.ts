@@ -10,7 +10,7 @@ type StepFunction<TInput, TOutput, TResults extends Record<string, unknown>> = (
 type RollbackFunction<TOutput> = (output: TOutput) => Promise<void>;
 
 type SagaResult<TData, TResults extends Record<string, unknown>> =
-  | { status: 'success'; data: TData; results: TResults }
+  | { status: 'success'; data: TData; results: TResults; rollback: () => Promise<void> }
   | { status: 'failed'; error: Error; failedAt: string };
 
 // Internal step storage
@@ -93,6 +93,9 @@ class SagaBuilder<
         status: 'success',
         data: lastOutput as TLastOutput,
         results: results as TResults,
+        rollback: async () => {
+          await this.rollback(executedSteps);
+        },
       };
     } catch (error) {
       return {
@@ -129,4 +132,5 @@ export function createSaga(): SagaBuilder<Record<string, never>, undefined> {
 }
 
 // Export types for consumers
-export type { StepContext, StepFunction, RollbackFunction, SagaResult };
+export type { StepContext, StepFunction, RollbackFunction, SagaResult, StepDefinition };
+export { SagaBuilder };
